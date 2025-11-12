@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es-ES">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Biblioteca Salesianos</title>
+    <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+    <div class="contenedor">
+        <h1>Biblioteca Salesianos Cartagena</h1>
+        <h2>Código QR de Acceso</h2>
+        
+        <div class="qr-container">
+            <div id="qr-code"></div>
+            <p id="tiempo-restante">Próxima actualización en: <span id="contador">5:00</span></p>
+            <p id="codigo-actual">Código actual: <span id="codigo-texto"></span></p>
+        </div>
+        
+        <div class="scanner-section">
+            <button id="btn-scanner" class="boton-scanner">Escanear QR de Libro</button>
+            <div id="scanner-container" style="display: none;">
+                <video id="scanner-video" width="300" height="200"></video>
+                <button id="btn-cerrar-scanner" class="boton-cerrar">Cerrar Cámara</button>
+            </div>
+        </div>
+        
+        <div class="secciones-container">
+            <div class="libros-section">
+                <h3>Libros en posesión</h3>
+                <div class="libros-lista" id="lista-libros">
+                    <div class="mensaje-vacio" id="mensaje-vacio">
+                        <p>No tienes libros en posesión.</p>
+                        <p>Escanea el código QR de un libro para agregarlo a tu lista.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="incidencias-section">
+                <h3>Libros no devueltos</h3>
+                <div class="penalizacion-info">
+                    <p><strong>Penalización:</strong> -0,5 en tus notas finales cada 3 días de retraso en la devolución</p>
+                </div>
+                <div class="libros-lista" id="lista-retrasados">
+                    <div class="mensaje-vacio">
+                        <p>No tienes libros con retraso.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <a href="login.html" class="enlace-volver">Cerrar Sesión</a>
+    </div>
+
+    <script>
+        let tiempoRestante = 300; // 5 minutos en segundos
+        let codigoActual = '';
+
+        function generarCodigoAleatorio() {
+            const timestamp = Date.now();
+            const random = Math.random().toString(36).substring(2, 15);
+            return `BIBLIO-${timestamp}-${random}`;
+        }
+
+        function generarQR() {
+            codigoActual = generarCodigoAleatorio();
+            document.getElementById('codigo-texto').textContent = codigoActual;
+            
+            const qrContainer = document.getElementById('qr-code');
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(codigoActual)}&color=ea1700&bgcolor=ffffff`;
+            qrContainer.innerHTML = `<img src="${qrUrl}" alt="Código QR" style="border: 2px solid #ea1700; border-radius: 10px;">`;
+            
+            tiempoRestante = 300;
+        }
+
+        function actualizarContador() {
+            const minutos = Math.floor(tiempoRestante / 60);
+            const segundos = tiempoRestante % 60;
+            document.getElementById('contador').textContent = 
+                `${minutos}:${segundos.toString().padStart(2, '0')}`;
+            
+            if (tiempoRestante <= 0) {
+                generarQR();
+            } else {
+                tiempoRestante--;
+            }
+        }
+
+        function actualizarFechas() {
+            // Función vacía - las fechas se calculan dinámicamente al agregar libros
+        }
+
+        // Variables para el escáner
+        let stream = null;
+        let scanning = false;
+        
+        // Función para agregar nuevo libro
+        function agregarLibro(titulo) {
+            // Ocultar mensaje de lista vacía si existe
+            const mensajeVacio = document.getElementById('mensaje-vacio');
+            if (mensajeVacio) {
+                mensajeVacio.style.display = 'none';
+            }
+            
+            const hoy = new Date();
+            const fechaDevolucion = new Date(hoy.getTime() + (10 * 24 * 60 * 60 * 1000));
+            
+            const nuevoLibro = document.createElement('div');
+            nuevoLibro.className = 'libro-item';
+            nuevoLibro.innerHTML = `
+                <div class="libro-info">
+                    <span class="libro-titulo">${titulo}</span>
+                    <span class="libro-fecha">Prestado: ${hoy.toLocaleDateString('es-ES')}</span>
+                    <span class="libro-devolucion">Devolver antes: ${fechaDevolucion.toLocaleDateString('es-ES')}</span>
+                </div>
+                <button class="btn-eliminar" onclick="eliminarLibro(this)">✕</button>
+            `;
+            
+            document.getElementById('lista-libros').appendChild(nuevoLibro);
+            alert(`Libro "${titulo}" agregado a tu lista!`);
+        }
+        
+        // Función para eliminar libro
+        function eliminarLibro(boton) {
+            const libroItem = boton.parentElement;
+            const titulo = libroItem.querySelector('.libro-titulo').textContent;
+            
+            if (confirm(`¿Estás seguro de que quieres devolver "${titulo}"?`)) {
+                libroItem.remove();
+                
+                // Mostrar mensaje de lista vacía si no hay más libros
+                const librosRestantes = document.querySelectorAll('.libro-item').length;
+                if (librosRestantes === 0) {
+                    document.getElementById('mensaje-vacio').style.display = 'block';
+                }
+                
+                alert(`Libro "${titulo}" devuelto correctamente.`);
+            }
+        }
+        
+        // Función para iniciar escáner
+        async function iniciarScanner() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                const video = document.getElementById('scanner-video');
+                video.srcObject = stream;
+                video.play();
+                
+                document.getElementById('scanner-container').style.display = 'block';
+                document.getElementById('btn-scanner').style.display = 'none';
+                scanning = true;
+                
+                // Simular detección de QR (en producción usarías una librería como QuaggaJS)
+                setTimeout(() => {
+                    if (scanning) {
+                        const librosDisponibles = ['Matemáticas Avanzadas', 'Física Cuántica', 'Historia del Arte', 'Programación Web'];
+                        const libroAleatorio = librosDisponibles[Math.floor(Math.random() * librosDisponibles.length)];
+                        agregarLibro(libroAleatorio);
+                        cerrarScanner();
+                    }
+                }, 3000);
+                
+            } catch (error) {
+                alert('Error al acceder a la cámara: ' + error.message);
+            }
+        }
+        
+        // Función para cerrar escáner
+        function cerrarScanner() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            scanning = false;
+            document.getElementById('scanner-container').style.display = 'none';
+            document.getElementById('btn-scanner').style.display = 'block';
+        }
+        
+        // Event listeners
+        document.getElementById('btn-scanner').addEventListener('click', iniciarScanner);
+        document.getElementById('btn-cerrar-scanner').addEventListener('click', cerrarScanner);
+        
+        // Generar primer QR al cargar la página
+        generarQR();
+        actualizarFechas();
+        
+        // Actualizar contador cada segundo
+        setInterval(actualizarContador, 1000);
+    </script>
+</body>
+</html>

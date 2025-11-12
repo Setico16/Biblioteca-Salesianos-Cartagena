@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es-ES">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Biblioteca Salesianos</title>
+    <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+    <div class="contenedor">
+        <h1>Biblioteca Salesianos Cartagena</h1>
+        <h2>Iniciar Sesión</h2>
+        
+        <form class="formulario-login" onsubmit="return validarLogin(event)">
+            <div class="campo">
+                <label for="usuario">Usuario:</label>
+                <input type="text" id="usuario" name="usuario" required>
+            </div>
+            
+            <div class="campo">
+                <label for="password">Contraseña:</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            
+            <button type="submit" class="boton-login">Iniciar Sesión</button>
+        </form>
+        
+        <div id="mensaje-error" style="color: red; margin-top: 10px; display: none;">Usuario o contraseña incorrectos</div>
+        
+        <a href="index pagina web.html" class="enlace-volver">Volver al inicio</a>
+    </div>
+    <script>
+        function validarLogin(event) {
+            event.preventDefault();
+            
+            const usuario = document.getElementById('usuario').value;
+            const password = document.getElementById('password').value;
+            
+            // Credenciales predefinidas
+            const credenciales = {
+                'biblioteca': 'salesianos2025',
+                'Sergio Almagro': 'DNI',
+                "Javier Ruso":"Celia",
+                "Alfonso Beltran":"Sete",
+                "Beltran.nialf20@cartagena.salesianos.edu":"sete2",
+                "Zineb":"Zineb",
+                "Rebeca Mena":"Rebeca",
+                "Cristian Moreno":"Maki",
+            };
+            
+            if (credenciales[usuario] && credenciales[usuario] === password) {
+                window.location.href = 'dashboard.html';
+            } else {
+                document.getElementById('mensaje-error').style.display = 'block';
+            }
+        }
+    </script>
+</body>
+</html>
